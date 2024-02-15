@@ -1,69 +1,86 @@
-## Q&A Chatbot
-#from langchain.llms import OpenAI
-#pip install google-generativeai
-GOOGLE_API_KEY="AIzaSyBHKt80rpKgq_c1s1C7YDvfw6-Wtg2vc7Y"
-
-
-
+pip 
+import streamlit as st
+from dotenv import load_dotenv
+import pickle
+from PyPDF2 import PdfReader
+from streamlit_extras.add_vertical_space import add_vertical_space
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.llms import OpenAI
+from langchain.chains.question_answering import load_qa_chain
+from langchain.callbacks import get_openai_callback
 import os
-import pathlib
-import textwrap
-from PIL import Image
-
-
-#import google.generativeai as genai
-api_key=GOOGLE_API_KEY
-
-## Function to load OpenAI model and get respones
-
-def get_gemini_response(input,image,prompt):
-    model = genai.GenerativeModel('gemini-pro-vision')
-    response = model.generate_content([input,image[0],prompt])
-    return response.text
-    
-
-def input_image_setup(uploaded_file):
-    # Check if a file has been uploaded
-    if uploaded_file is not None:
-        # Read the file into bytes
-        bytes_data = uploaded_file.getvalue()
-
-        image_parts = [
-            {
-                "mime_type": uploaded_file.type,  # Get the mime type of the uploaded file
-                "data": bytes_data
-            }
-        ]
-        return image_parts
-    else:
-        raise FileNotFoundError("No file uploaded")
-
-
-##initialize our streamlit app
-
-st.set_page_config(page_title="Gemini Image Demo")
-
-st.header("Gemini Application")
-input=st.text_input("Input Prompt: ",key="input")
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-image=""   
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image.", use_column_width=True)
-
-
-submit=st.button("Tell me about the image")
-
-input_prompt = """
-               You are an expert in understanding invoices.
-               You will receive input images as invoices &
-               you will have to answer questions based on the input image
-               """
-
-## If ask button is clicked
-
-if submit:
-    image_data = input_image_setup(uploaded_file)
-    response=get_gemini_response(input_prompt,image_data,input)
-    st.subheader("The Response is")
-    st.write(response)
+ 
+# Sidebar contents
+with st.sidebar:
+    st.title('🤗💬 LLM Chat App')
+    st.markdown('''
+    ## About
+    This app is an LLM-powered chatbot built using:
+    - [Streamlit](https://streamlit.io/)
+    - [LangChain](https://python.langchain.com/)
+    - [OpenAI](https://platform.openai.com/docs/models) LLM model
+ 
+    ''')
+    add_vertical_space(5)
+    st.write('Made with ❤️ by [Prompt Engineer](https://youtube.com/@engineerprompt)')
+ 
+load_dotenv()
+ 
+def main():
+    st.header("Chat with PDF 💬")
+ 
+ 
+    # upload a PDF file
+    pdf = st.file_uploader("Upload your PDF", type='pdf')
+ 
+    # st.write(pdf)
+    if pdf is not None:
+        pdf_reader = PdfReader(pdf)
+        
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+ 
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len
+            )
+        chunks = text_splitter.split_text(text=text)
+ 
+        # # embeddings
+        store_name = pdf.name[:-4]
+        st.write(f'{store_name}')
+        # st.write(chunks)
+ 
+        if os.path.exists(f"{store_name}.pkl"):
+            with open(f"{store_name}.pkl", "rb") as f:
+                VectorStore = pickle.load(f)
+            # st.write('Embeddings Loaded from the Disk')s
+        else:
+            embeddings = OpenAIEmbeddings()
+            VectorStore = FAISS.from_texts(chunks, embedding=embeddings)
+            with open(f"{store_name}.pkl", "wb") as f:
+                pickle.dump(VectorStore, f)
+ 
+        # embeddings = OpenAIEmbeddings()
+        # VectorStore = FAISS.from_texts(chunks, embedding=embeddings)
+ 
+        # Accept user questions/query
+        query = st.text_input("Ask questions about your PDF file:")
+        # st.write(query)
+ 
+        if query:
+            docs = VectorStore.similarity_search(query=query, k=3)
+ 
+            llm = OpenAI()
+            chain = load_qa_chain(llm=llm, chain_type="stuff")
+            with get_openai_callback() as cb:
+                response = chain.run(input_documents=docs, question=query)
+                print(cb)
+            st.write(response)
+ 
+if __name__ == '__main__':
+    main()
