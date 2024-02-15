@@ -11,7 +11,7 @@ import textwrap
 from PIL import Image
 
 
-import google.generativeai as genai
+#import google.generativeai as genai
 api_key=GOOGLE_API_KEY
 
 ## Function to load OpenAI model and get respones
