@@ -1,11 +1,9 @@
 # Q&A Chatbot
 #from langchain.llms import OpenAI
+GOOGLE_API_KEY="AIzaSyBHKt80rpKgq_c1s1C7YDvfw6-Wtg2vc7Y"
 
-from dotenv import load_dotenv
 
-load_dotenv()  # take environment variables from .env.
 
-import streamlit as st
 import os
 import pathlib
 import textwrap
