@@ -1,5 +1,5 @@
 # Q&A Chatbot
-#from langchain.llms import OpenAI
+from langchain.llms import OpenAI
 pip install google-generativeai
 GOOGLE_API_KEY="AIzaSyBHKt80rpKgq_c1s1C7YDvfw6-Wtg2vc7Y"
 
@@ -12,10 +12,7 @@ from PIL import Image
 
 
 import google.generativeai as genai
-
-
-os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+api_key=GOOGLE_API_KEY
 
 ## Function to load OpenAI model and get respones
 
